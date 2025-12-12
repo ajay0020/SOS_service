@@ -1,0 +1,6 @@
+node_modules/ 
+android/app/build/ 
+ios/Pods/ 
+*.log 
+.vscode/ 
+google-services.json 
