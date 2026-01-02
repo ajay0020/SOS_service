@@ -24,3 +24,6 @@ Initial project setup and requirements definition completed.
 ## 🚨 SOS Trigger
 The application uses a long-press SOS button (3 seconds)
 to safely trigger emergency alerts.
+## 📍 Location Handling
+Live location is requested only during SOS events
+to ensure privacy and reliability.
