@@ -1,11 +1,9 @@
 {
   "name": "sos-backend",
   "version": "1.0.0",
-  "description": "Backend for SOS Emergency App",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "start": "node src/server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
