@@ -1,3 +1,4 @@
+const contactRoutes = require("./routes/contact.routes");
 const express = require("express");
 const connectDB = require("./config/db");
 const sosRoutes = require("./routes/sos.routes");
@@ -12,6 +13,8 @@ app.use(express.json());
 
 // Routes
 app.use("/api", sosRoutes);
+app.use("/api", contactRoutes);
+
 
 // Test route
 app.get("/", (req, res) => {
