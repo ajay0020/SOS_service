@@ -1,4 +1,7 @@
 // SOS controller logic will go here
+const LAST_SOS_TIME = {};
+const COOLDOWN_MS = 60000; // 60 seconds
+
 const SOSAlert = require("../models/SOSAlert");
 const EmergencyContact = require("../models/EmergencyContact");
 
@@ -24,6 +27,20 @@ const notifyContact = async (contact, alert) => {
  * POST /api/sos
  * Trigger SOS alert with live location
  */
+const now = Date.now();
+
+if (
+  LAST_SOS_TIME[userId] &&
+  now - LAST_SOS_TIME[userId] < COOLDOWN_MS
+) {
+  return res.status(429).json({
+    success: false,
+    message: "Please wait before sending another SOS"
+  });
+}
+
+LAST_SOS_TIME[userId] = now;
+
 const triggerSOS = async (req, res) => {
   try {
     const { userId, latitude, longitude } = req.body;
