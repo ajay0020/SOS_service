@@ -1,5 +1,6 @@
 const SOSAlert = require("../models/SOSAlert");
 const EmergencyContact = require("../models/EmergencyContact");
+const { findNearbyServices } = require("../services/emergency.service");
 
 // ==============================
 // CONFIG
@@ -9,12 +10,11 @@ const COOLDOWN_MS = 60000; // 60 seconds
 
 // ==============================
 // NOTIFICATION HELPER
-// (SMS / WhatsApp integrated in Issue 8)
+// (SMS / WhatsApp already integrated earlier)
 // ==============================
 const notifyContact = async (contact, alert) => {
   const liveLocationLink = `https://www.google.com/maps?q=${alert.latitude},${alert.longitude}`;
 
-  // Real SMS integration already wired (Twilio / service layer)
   console.log(
     `🚨 SOS ALERT 🚨\n` +
     `Contact: ${contact.name}\n` +
@@ -84,30 +84,40 @@ const triggerSOS = async (req, res) => {
       });
     }
 
-    // 7️⃣ Notify all contacts
+    // 7️⃣ Notify emergency contacts
     for (const contact of contacts) {
       await notifyContact(contact, alert);
     }
 
-    // 8️⃣ Logging (Issue 10 – Step 3)
+    // 8️⃣ Find nearby ambulances & hospitals
+    const { nearbyAmbulances, nearbyHospitals } =
+      await findNearbyServices(latitude, longitude);
+
+    console.log(
+      `[EMERGENCY] Found ${nearbyAmbulances.length} ambulances and ${nearbyHospitals.length} hospitals`
+    );
+
+    // 9️⃣ Logging
     console.log(
       `[SOS] User ${userId} triggered SOS at ${new Date().toISOString()}`
     );
 
-    // 9️⃣ Response
+    // 🔟 Response
     res.status(201).json({
       success: true,
       message: "SOS alert sent successfully",
       alert,
       liveLocation: `https://www.google.com/maps?q=${latitude},${longitude}`,
-      notifiedCount: contacts.length
+      notifiedContacts: contacts.length,
+      ambulances: nearbyAmbulances,
+      hospitals: nearbyHospitals
     });
 
   } catch (error) {
     console.error("[SOS ERROR]", error);
     res.status(500).json({
       success: false,
-      message: "Server error while sending SOS"
+      message: "Server error while processing SOS"
     });
   }
 };
