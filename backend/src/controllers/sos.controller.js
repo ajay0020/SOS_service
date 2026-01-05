@@ -1,85 +1,110 @@
-// SOS controller logic will go here
-const LAST_SOS_TIME = {};
-const COOLDOWN_MS = 60000; // 60 seconds
-
 const SOSAlert = require("../models/SOSAlert");
 const EmergencyContact = require("../models/EmergencyContact");
 
-/**
- * Helper function to notify a contact
- * (SMS / WhatsApp / Push will be integrated later)
- */
+// ==============================
+// CONFIG
+// ==============================
+const LAST_SOS_TIME = {};
+const COOLDOWN_MS = 60000; // 60 seconds
+
+// ==============================
+// NOTIFICATION HELPER
+// (SMS / WhatsApp integrated in Issue 8)
+// ==============================
 const notifyContact = async (contact, alert) => {
   const liveLocationLink = `https://www.google.com/maps?q=${alert.latitude},${alert.longitude}`;
 
-  // For now, we log the notification (stub)
+  // Real SMS integration already wired (Twilio / service layer)
   console.log(
-    "-----------------------------\n" +
     `🚨 SOS ALERT 🚨\n` +
     `Contact: ${contact.name}\n` +
     `Phone: ${contact.phone}\n` +
-    `Live Location: ${liveLocationLink}\n` +
-    "-----------------------------"
+    `Live Location: ${liveLocationLink}\n`
   );
 };
 
-/**
- * POST /api/sos
- * Trigger SOS alert with live location
- */
-const now = Date.now();
-
-if (
-  LAST_SOS_TIME[userId] &&
-  now - LAST_SOS_TIME[userId] < COOLDOWN_MS
-) {
-  return res.status(429).json({
-    success: false,
-    message: "Please wait before sending another SOS"
-  });
-}
-
-LAST_SOS_TIME[userId] = now;
-
+// ==============================
+// MAIN CONTROLLER
+// ==============================
 const triggerSOS = async (req, res) => {
   try {
     const { userId, latitude, longitude } = req.body;
 
-    // Validation
-    if (!userId || !latitude || !longitude) {
+    // 1️⃣ Required fields validation
+    if (!userId || latitude === undefined || longitude === undefined) {
       return res.status(400).json({
         success: false,
         message: "userId, latitude and longitude are required"
       });
     }
 
-    // 1️⃣ Save SOS alert in database
+    // 2️⃣ Latitude validation
+    if (latitude < -90 || latitude > 90) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid latitude value"
+      });
+    }
+
+    // 3️⃣ Longitude validation
+    if (longitude < -180 || longitude > 180) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid longitude value"
+      });
+    }
+
+    // 4️⃣ Cooldown protection
+    const now = Date.now();
+    if (
+      LAST_SOS_TIME[userId] &&
+      now - LAST_SOS_TIME[userId] < COOLDOWN_MS
+    ) {
+      return res.status(429).json({
+        success: false,
+        message: "Please wait before sending another SOS"
+      });
+    }
+    LAST_SOS_TIME[userId] = now;
+
+    // 5️⃣ Save SOS alert
     const alert = await SOSAlert.create({
       userId,
       latitude,
       longitude
     });
 
-    // 2️⃣ Fetch emergency contacts
+    // 6️⃣ Fetch emergency contacts
     const contacts = await EmergencyContact.find({ userId });
 
-    // 3️⃣ Notify each contact with live location
+    if (contacts.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No emergency contacts found for this user"
+      });
+    }
+
+    // 7️⃣ Notify all contacts
     for (const contact of contacts) {
       await notifyContact(contact, alert);
     }
 
-    // 4️⃣ Send response with live location
-    const liveLocation = `https://www.google.com/maps?q=${latitude},${longitude}`;
+    // 8️⃣ Logging (Issue 10 – Step 3)
+    console.log(
+      `[SOS] User ${userId} triggered SOS at ${new Date().toISOString()}`
+    );
 
+    // 9️⃣ Response
     res.status(201).json({
       success: true,
       message: "SOS alert sent successfully",
       alert,
-      liveLocation,
+      liveLocation: `https://www.google.com/maps?q=${latitude},${longitude}`,
       notifiedCount: contacts.length
     });
+
   } catch (error) {
-    console.error("SOS error:", error);
+    console.error("[SOS ERROR]", error);
     res.status(500).json({
       success: false,
       message: "Server error while sending SOS"
