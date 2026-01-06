@@ -83,3 +83,4 @@ Triggers an SOS alert with live location.
   "notifiedContacts": 2
 }
 
+--
